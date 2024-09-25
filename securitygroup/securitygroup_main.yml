@@ -1,0 +1,34 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Driver template to deploy the VPC security groups
+Parameters:
+  project:
+    Type: String
+    Default: cloudweb
+    Description: Project Name
+  env:
+    Type: String
+    Default: stag
+    AllowedValues: [prod, dev, qa, stag]
+    Description: Environment Name
+
+  s3ArtifactPath:
+    Type: String
+    Default: "https://cloudweb-stag-us-east-1-7123456789.s3.amazonaws.com/code/cfn/services"
+    Description: "Artifact bucket path"
+
+Resources:
+  securityGroup:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub "${s3ArtifactPath}/securitygroup/securitygroup-app.yml"
+      Parameters:
+        project: !Ref project
+        env: !Ref env
+        vpcId: !GetAtt vpc.Outputs.vpcId
+        cidrIp: 45.64.183.177/32
+
+Outputs:
+  securityGroup:
+    Value: !Ref securityGroup
+    Export:
+      Name: !Sub "${project}-${env}-securitygroup-${AWS::Region}"

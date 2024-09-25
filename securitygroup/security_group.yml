@@ -1,0 +1,147 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Template to create the Security Groups
+Parameters:
+  project:
+    Type: String
+    Description: Project Name
+  env:
+    Type: String
+    Default: stag
+    AllowedValues: [prod, dev, qa, stag]
+    Description: Environment Name
+  vpcId:
+    Type: String
+    Description: ID of the VPC for the security group
+  cidrIp:
+    Type: String
+    Description: CIDR IP of domain
+
+Resources:
+  sglambda:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref vpcId
+      GroupDescription: Security group to allow traffic on lambda function from rds
+      Tags:
+        - Key: Name
+          Value: !Sub "${project}-${env}-sglambda-${AWS::Region}"
+        - Key: project
+          Value: !Ref project
+        - Key: environment
+          Value: !Ref env
+  sglambdaHttpsIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref sglambda
+      Description: Allow https traffic
+      IpProtocol: tcp
+      FromPort: 443
+      ToPort: 443
+      CidrIp: 0.0.0.0/0
+  sglambdaHttpIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref sglambda
+      Description: Allow http traffic
+      IpProtocol: tcp
+      FromPort: 80
+      ToPort: 80
+      CidrIp: 0.0.0.0/0
+  sglambdaEgress:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !Ref sglambda
+      Description: Allow traffic
+      IpProtocol: -1
+      CidrIp: 0.0.0.0/0
+
+  sglambdaPostgres:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref vpcId
+      GroupDescription: Security group to allow traffic on lambda function from rds
+      Tags:
+        - Key: Name
+          Value: !Sub "${project}-${env}-sglambdaPostgres-${AWS::Region}"
+        - Key: project
+          Value: !Ref project
+        - Key: environment
+          Value: !Ref env
+  sglambdaPostgresEgress:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !Ref sglambdaPostgres
+      Description: Allow traffic
+      IpProtocol: tcp
+      FromPort: 5432
+      ToPort: 5432
+      SourceSecurityGroupId: !Ref sgpostgresLambda
+
+  sgpostgresLambda:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group to allow traffic on database
+      VpcId: !Ref vpcId
+      Tags:
+        - Key: Name
+          Value: !Sub "${project}-${env}-sgpostgresLambda-${AWS::Region}"
+        - Key: project
+          Value: !Ref project
+        - Key: environment
+          Value: !Ref env
+  sgpostgresLambdaIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref sgpostgresLambda
+      Description: Allow traffic on db
+      IpProtocol: tcp
+      FromPort: 5432
+      ToPort: 5432
+      SourceSecurityGroupId: !Ref sglambdaPostgres
+  sgDbEgress:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !Ref sgpostgresLambda
+      Description: Allow traffic on db
+      IpProtocol: tcp
+      FromPort: 5432
+      ToPort: 5432
+      SourceSecurityGroupId: !Ref sgPostgres
+
+  sgPostgres:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref vpcId
+      GroupDescription: Security group to allow traffic
+      Tags:
+        - Key: Name
+          Value: !Sub "${project}-${env}-sgPostgres-${AWS::Region}"
+        - Key: project
+          Value: !Ref project
+        - Key: environment
+          Value: !Ref env
+  sgPostgresIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref sgPostgres
+      Description: Allow traffic
+      IpProtocol: tcp
+      FromPort: 5432
+      ToPort: 5432
+      SourceSecurityGroupId: !Ref sgpostgresLambda
+  sgPostgresIpIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref sgPostgres
+      Description: Allow ip traffic
+      IpProtocol: tcp
+      FromPort: 5432
+      ToPort: 5432
+      CidrIp: !Ref cidrIp
+  sgPostgresEgress:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !Ref sgPostgres
+      Description: Allow all traffic
+      IpProtocol: -1
+      CidrIp: 0.0.0.0/0

@@ -1,0 +1,48 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: CloudFormation template for Lambda function
+Parameters:
+  project:
+    Type: String
+    Description: Project Name
+    Default: botest
+  env:
+    Type: String
+    AllowedValues:
+      - prod
+      - dev
+      - qa
+      - uat
+    Description: Environment Name
+    Default: dev
+
+Resources:
+  ecrRepository:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: !Sub "${project}-${env}-repository"
+      RepositoryPolicyText:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: "AllowPushPull"
+            Effect: Allow
+            Principal:
+              Service:
+                - "lambda.amazonaws.com"
+            Action:
+              - "ecr:BatchGetImage"
+              - "ecr:GetDownloadUrlForLayer"
+              - "ecr:SetRepositoryPolicy"
+              - "ecr:DeleteRepositoryPolicy"
+              - "ecr:GetRepositoryPolicy"
+      Tags:
+        - Key: Name
+          Value: !Sub "${project}-${env}"
+        - Key: project
+          Value: !Ref project
+        - Key: environment
+          Value: !Ref env
+
+Outputs:
+  ecrRepository:
+    Description: ECR repository
+    Value: !Ref ecrRepository

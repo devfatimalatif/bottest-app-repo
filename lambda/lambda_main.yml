@@ -1,0 +1,61 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Driver template to deploy lambda function
+Parameters:
+  project:
+    Type: String
+    Description: Project Name
+  app:
+    Type: String
+    Description: Application Name
+    Default: app
+  env:
+    Type: String
+    AllowedValues:
+      - prod
+      - dev
+      - qa
+      - uat
+    Description: Environment Name
+    Default: dev
+  slacktoken:
+    Type: String
+    Description: Value of slack token
+  openaiapikey:
+    Type: String
+    Description: value of open api key
+  jwksurl:
+    Type: String
+    Description: value of jwks url
+  environment:
+    Type: String
+    Description: value of environment
+  clerkapikey:
+    Type: String
+    Description: value of clerk api key
+  databaseurl:
+    Type: String
+    Description: Endpoint of database
+  s3ArtifactPath:
+    Type: String
+    Default: "https://cloudweb-app-dev-us-west-1-123456789.s3.amazonaws.com/code/cfn/services"
+    Description: "Artifact bucket path"
+
+Resources:
+  lambdaFunction:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        project: !Ref project
+        app: !Ref app
+        env: !Ref env
+        privateSubnet01: !GetAtt vpc.Outputs.privateSubnetA
+        privateSubnet02: !GetAtt vpc.Outputs.privateSubnetB
+        securityGroup: !GetAtt securityGroup.Outputs.webSecurityGroup
+        databaseurl: !GetAtt rds.Outputs.dBEndpoint
+        slacktoken: !Ref slacktoken
+        openaiapikey: !Ref openaiapikey
+        jwksurl: !Ref jwksurl
+        environment: !Ref envirnment
+        clerkapikey: !Ref clerkapikey
+        ecrRepository: "xyz"
+      TemplateURL: !Sub "${s3ArtifactPath}/lambda/lambdaresource-app.yml"

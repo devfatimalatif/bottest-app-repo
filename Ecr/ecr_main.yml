@@ -1,0 +1,33 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Driver template to deploy lambda function
+Parameters:
+  project:
+    Type: String
+    Description: Project Name
+  app:
+    Type: String
+    Description: Application Name
+    Default: app
+  env:
+    Type: String
+    AllowedValues:
+      - prod
+      - dev
+      - qa
+      - uat
+    Description: Environment Name
+    Default: dev
+  s3ArtifactPath:
+    Type: String
+    Default: "https://cloudweb-app-dev-us-west-1-123456789.s3.amazonaws.com/code/cfn/services"
+    Description: "Artifact bucket path"
+
+Resources:
+  ecrRepository:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        project: !Ref project
+        app: !Ref app
+        env: !Ref env
+      TemplateURL: !Sub "${s3ArtifactPath}/ecr/ecr_app.yml"

@@ -1,0 +1,57 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Driver template to create IAM roles
+Parameters:
+  project:
+    Type: String
+    Description: Project Name
+    Default: cloudweb
+  env:
+    Type: String
+    Default: dev
+    AllowedValues: [prod, dev, qa]
+    Description: Environment Name
+  dBUsername:
+    Type: String
+    Default: admin
+    NoEcho: true
+    Description: The Username for database access
+  dBPassword:
+    Type: String
+    Default: admin123
+    NoEcho: true
+    Description: The Password for database access
+  s3ArtifactPath:
+    Type: String
+    Default: "https://cloudweb-wordpress-dev-us-east-1-7123456789.s3.amazonaws.com/code/cfn/services"
+    Description: "Artifact bucket path"
+
+Resources:
+  rdsInstance:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub "${s3ArtifactPath}/rds/rds-app.yml"
+      Parameters:
+        project: !Ref project
+        env: !Ref env
+        dBInstanceIdentifier: db
+        dbName: dr
+        dBInstanceClass: db.t3.micro
+        # dbPrivateSubnet01: subnet-0c5065e4e27015031 #!GetAtt vpc.Outputs.protectedSubnet1
+        # dbPrivateSubnet02: subnet-07aa7bd42e09f052f #!GetAtt vpc.Outputs.protectedSubnet2
+        dbsubnets: !GetAtt vpc.Outputs.SubnetIds
+        dbSecurityGroup: !GetAtt securityGroup.Outputs.sgRds
+        dbEncryptionStatus: true
+        dbPubliclyAccessible: false
+        dbStorageType: gp2
+        dbDeletionProtection: false
+        dBAllocatedStorage: 20
+        dBEngine: "postgres"
+        dBUsername: admin
+        dBPassword: admin123
+
+Outputs:
+  rdsInstance:
+    Description: Rds instance Stack
+    Value: !Ref rdsInstance
+    Export:
+      Name: !Sub "${project}-${env}-rdsInstance-${AWS::Region}"

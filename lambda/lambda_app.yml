@@ -1,0 +1,114 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: CloudFormation template for Lambda function
+Parameters:
+  project:
+    Type: String
+    Description: Project Name
+    Default: "bottest"
+  app:
+    Type: String
+    Description: Application Name
+    Default: app
+  env:
+    Type: String
+    AllowedValues:
+      - prod
+      - dev
+      - qa
+      - uat
+    Description: Environment Name
+    Default: dev
+  privateSubnet01:
+    Type: String
+    Description: The subnet Id for the DB cluster
+  privateSubnet02:
+    Type: String
+    Description: The subnet Id for the DB cluster
+  securityGroup:
+    Type: String
+    Description: The ID of the security group
+  slacktoken:
+    Type: String
+    Description: Value of slack token
+  openaiapikey:
+    Type: String
+    Description: value of open api key
+  jwksurl:
+    Type: String
+    Description: value of jwks url
+  environment:
+    Type: String
+    Description: value of environment
+  clerkapikey:
+    Type: String
+    Description: value of clerk api key
+  databaseurl:
+    Type: String
+    Description: Endpoint of database
+  ecrRepository:
+    Type: String
+    Description: Name of ECR where immage stored
+
+Resources:
+  lambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${project}-${app}-${env}-lambda-execution-role"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+        Policies:
+          - PolicyName: LambdaRDSAccess
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - rds:DescribeDBInstances
+                    - ec2:DescribeSecurityGroups
+                    - ec2:DescribeSubnets
+                    - ec2:DescribeVpcs
+                    - logs:*
+                    - cloudwatch:GenerateQuery
+                    - logs:CreateLogGroup
+                    - logs:CreateLogStream
+                    - logs:PutLogEvents
+                    - ec2:CreateNetworkInterface
+                    - ec2:DescribeNetworkInterfaces
+                    - ec2:DescribeSubnets
+                    - ec2:DeleteNetworkInterface
+                    - ec2:AssignPrivateIpAddresses
+                    - ec2:UnassignPrivateIpAddresses
+                    - logs:CreateLogStream
+                    - logs:PutLogEvents
+
+                  Resource:
+                    - "*"
+                    - "arn:aws:logs:us-east-1:123456789:*"
+                    - "arn:aws:logs:us-east-1:123456789:log-group:/aws/*:*"
+  lambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      PackageType: Image
+      Role: !GetAtt lambdaExecutionRole.Arn
+      Code:
+        ImageUri: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${ecrRepository}:latest"
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref securityGroup
+        SubnetIds:
+          - !Ref privateSubnet01
+          - !Ref privateSubnet02
+      Description: Invoke a function from ECR image
+      Environment:
+        Variables:
+          DATABASE_URI: !Ref databaseurl
+          CLERK_API_KEY: !Ref clerkapikey
+          ENVIRONMENT: !Ref environment
+          JWKS_URL: !Ref jwksurl
+          OPENAI_API_KEY: !Ref openaiapikey
+          SLACK_TOKEN: !Ref slacktoken
